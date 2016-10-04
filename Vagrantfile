@@ -18,6 +18,7 @@ servers = [
     {  
         name: "server2",
         ip: "192.168.33.102",
+        cpus: 2
     }
 ]
 ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
@@ -44,6 +45,7 @@ Vagrant.configure(VAGRANT_API_VER) do |config|
 
             node.vm.provider "virtualbox" do |vb|
                 #vb.gui = true
+                vb.cpus = svr[:cpus] if svr[:cpus]
                 vb.memory = svr[:memory] if svr[:memory]
                 vb.name = svr[:name]
             end
