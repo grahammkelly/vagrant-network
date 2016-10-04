@@ -12,12 +12,12 @@ servers = [
         memory: "4098",
         expose_ports: [
             {vm: "8080", local: "80"}
-        ]
+        ],
+        external_script_cfg: ["blah.sh"]
     },
     {  
         name: "server2",
         ip: "192.168.33.102",
-        box: "ubuntu/trusty64"
     }
 ]
 ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
@@ -27,7 +27,7 @@ server_host_entries = servers.map {|svr| "#{svr[:ip]}  #{svr[:name]}"}
 Vagrant.configure(VAGRANT_API_VER) do |config|
     servers.each do |svr|
         config.vm.define svr[:name] do |node|
-            node.vm.box = svr[:box]
+            node.vm.box = svr[:box] || "ubuntu/trusty64"
             node.vm.hostname = svr[:name]
 
             #node.vm.box_check_update = false
@@ -61,6 +61,14 @@ Vagrant.configure(VAGRANT_API_VER) do |config|
                     echo -e "Adding the following entries to /etc/hosts\n\t#{server_host_entries.join("\n\t")}"
                     sudo echo -e "\n# VMs on the same network\n#{server_host_entries.join("\n")}\n" >> /etc/hosts
                 SHELL
+            end
+
+            if ((svr[:external_script_cfg] || false)) then
+                svr[:external_script_cfg].each {|scriptname|
+                    if (File.file?(scriptname)) then
+                        node.vm.provision "shell", path: scriptname
+                    end
+                }
             end
 
             #Set up a shared location. Files placed here will be available on ALL VMs
