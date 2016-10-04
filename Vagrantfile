@@ -72,7 +72,7 @@ Vagrant.configure(VAGRANT_API_VER) do |config|
             end
 
             #Set up a shared location. Files placed here will be available on ALL VMs
-            node.vm.synced_folder "#{Dir.pwd}/data", "/vagrant_data"
+            node.vm.synced_folder "#{Dir.pwd}/shared", "/vagrant_data"
         end
     end
    end
