@@ -2,6 +2,8 @@
 # vi: set ft=ruby :
 
 VAGRANT_API_VER = "2"
+DEFAULT_BOX = "ubuntu/trusty64"
+#DEFAULT_BOX = "centos/7"
 
 #Configuration
 servers = [
@@ -22,14 +24,22 @@ servers = [
     }
 ]
 ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
-server_host_entries = servers.map {|svr| "#{svr[:ip]}  #{svr[:name]}"}
 
 #Set up the boxes
 Vagrant.configure(VAGRANT_API_VER) do |config|
+    #Assuming you have the hostmanager plugin installed
+    # If not, install with '$ vagrant plugin install vagrant-hostmanager'
+    config.hostmanager.enabled = true
+    config.hostmanager.manage_host = true   #Tell vagrant to manage the new VMs onto the host system's /etc/hosts
+    config.hostmanager.manage_guest = true  #Tell vagrant to manage the new VMs onto the VM's /etc/hosts
+    config.hostmanager.ignore_private_ip = false
+    config.hostmanager.include_offline = true
+
     servers.each do |svr|
         config.vm.define svr[:name] do |node|
-            node.vm.box = svr[:box] || "ubuntu/trusty64"
+            node.vm.box = svr[:box] || DEFAULT_BOX
             node.vm.hostname = svr[:name]
+            node.hostmanager.aliases = ["#{svr[:name]}.localdomain"]
 
             #node.vm.box_check_update = false
 
@@ -58,10 +68,6 @@ Vagrant.configure(VAGRANT_API_VER) do |config|
                     # Create the SSH keys to allow direct SSH onto the box (not through vagrant)
                     echo #{ssh_pub_key} >> /home/vagrant/.ssh/authorized_keys
                     echo #{ssh_pub_key} >> /root/.ssh/authorized_keys
-
-                    #Add the other servers to the 'hosts' file
-                    echo -e "Adding the following entries to /etc/hosts\n\t#{server_host_entries.join("\n\t")}"
-                    sudo echo -e "\n# VMs on the same network\n#{server_host_entries.join("\n")}\n" >> /etc/hosts
                 SHELL
             end
 
