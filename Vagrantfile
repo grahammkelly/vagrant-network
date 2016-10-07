@@ -15,7 +15,16 @@ servers = [
         expose_ports: [
             {vm: "8080", local: "80"}
         ],
-        external_script_cfg: ["blah.sh"]
+        additional_provisioning: [
+            {   type: :inline,
+                contents: <<-FILE
+                    echo "fortune" >> /home/vagrant/.profile
+                FILE
+            },
+            {   type: :file,
+                contents: "blah.sh"
+            }
+        ]
     },
     {  
         name: "server2",
@@ -60,21 +69,33 @@ Vagrant.configure(VAGRANT_API_VER) do |config|
                 vb.name = svr[:name]
             end
 
+            #This does not need to be run unless the base box is a ubuntu image
             node.vm.provision "shell" do |sh|
                 sh.inline = <<-SHELL
                     echo "Ensuring the English locale is available"
                     sudo locale-gen en_IE.UTF-8
+                SHELL
+            end
 
+            node.vm.provision "shell" do |sh|
+                sh.inline = <<-SHELL
                     # Create the SSH keys to allow direct SSH onto the box (not through vagrant)
                     echo #{ssh_pub_key} >> /home/vagrant/.ssh/authorized_keys
                     echo #{ssh_pub_key} >> /root/.ssh/authorized_keys
                 SHELL
             end
 
-            if ((svr[:external_script_cfg] || false)) then
-                svr[:external_script_cfg].each {|scriptname|
-                    if (File.file?(scriptname)) then
-                        node.vm.provision "shell", path: scriptname
+            # The instructions frorm the inline commands or script file are applied ON THE VM, 
+            # NOT on the system provisioning the VMs. Keep this in mind.
+            if ((svr[:additional_provisioning] || false)) then
+                svr[:additional_provisioning].each {|prov|
+                    case prov[:type]
+                        when :inline
+                            node.vm.provision "shell", inline: prov[:contents]
+                        when :file
+                            node.vm.provision "shell", path: prov[:contents]
+                        else
+                            #No other implementations for additional provisioning
                     end
                 }
             end
@@ -83,4 +104,4 @@ Vagrant.configure(VAGRANT_API_VER) do |config|
             node.vm.synced_folder "#{Dir.pwd}/shared", "/vagrant_data"
         end
     end
-   end
+end
